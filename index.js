@@ -2,5 +2,5 @@
 
 var branchLinker = require('./jira-branch-server-linker');
 
-branchLinker.addBranchLink('API-1');
-console.log(process.argv);
+// do regex
+branchLinker.addBranchLink('API-2');

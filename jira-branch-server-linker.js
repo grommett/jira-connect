@@ -1,8 +1,8 @@
-var request = require('request-promise');
 var superAgent = require('superagent');
 var q = require('q');
 var branchName = 'https://pinkiering';
 var config = require('./config');
+var connect = require('./jira-connector');
 
 /**
  * Adds a branch link to a Jira card.
@@ -18,17 +18,20 @@ function addBranchLink(issueID) {
       cardLinkData = linkInCard(branchLink, data);
       // check that link is not already in card
       if(cardLinkData.length === 0) {
-        console.log('need to add link')
+        console.log('Jira branch linker >> need to add link')
         putCardLinkData(cardURL, createCardLinkObject(cardURL))
         .then(function(data) {
           console.log('Jira branch linker >> Link added ('+ branchLink +'). ', data);
+        })
+        .catch(function(e) {
+          console.log('caught error ', e);
         })
       }else{
         console.log('Jira branch linker >> Link to branch server ('+ branchLink +') was already in card.');
       }
     })
     .catch(function(e) {
-      console.log('Jira branch linker >> error in addBranchLink: ', e);
+      console.log('Jira branch linker >> error in addBranchLink(): ', e);
     })
 }
 
@@ -38,9 +41,7 @@ function addBranchLink(issueID) {
 */
 function getCardLinkData(link) {
   var deferred = q.defer();
-  superAgent.get(link)
-    .set(getRequestHeaders(config.user, config.password))
-    .on('error', handleRequestError)
+  connect.get(link)
     .end(function(err, res) {
       if(err) deferred.reject(err);
       deferred.resolve(res.body)
@@ -56,10 +57,9 @@ function getCardLinkData(link) {
 */
 function putCardLinkData(link, linkData) {
   var deferred = q.defer();
-  superAgent.post(link)
-    .set(getRequestHeaders(config.user, config.password))
+  console.log('link data ', linkData);
+  connect.post(link)
     .send(linkData)
-    .on('error', handleRequestError)
     .end(function(err, res) {
       if(err) deferred.reject(err);
       deferred.resolve(res.body);
@@ -83,14 +83,6 @@ function createCardLinkObject(url, title) {
 }
 
 /**
- * Request error handler.
- * @param {error} url - The link we want to add to the card.
-*/
-function handleRequestError(error) {
-  console.log('Request Error: ', error);
-}
-
-/**
  * Checks that the link we want to write is not already in the data.
  * @param {string} link - The link we want to check for.
  * @param {array} cardData - The card's data returned from Jira API.
@@ -102,30 +94,8 @@ function linkInCard(link, cardData) {
   return linkArray;
 }
 
-/**
- * Base64 encodes user credentials.
- * @param {string} user - User name.
- * @param {string} pass - Password.
-*/
-function encodeCredentials(user, pass) {
-  return 'Basic ' + new Buffer(user + ':' + pass).toString('base64');
-}
-
-/**
- * Request header factory.
- * @param {string} user - User name.
- * @param {string} pass - Password.
-*/
-function getRequestHeaders(user, pass) {
-  return {
-    'Authorization' : encodeCredentials(user, pass),
-    'Content-Type' : 'application/json'
-  }
-}
-
 module.exports = {
   addBranchLink: addBranchLink,
   confg: function(obj) {
-
   }
 }
