@@ -18,6 +18,7 @@ function getConnection(type, url) {
 
 /**
  * Adds default request headers
+ * @return a superagent with defaults attached
  */
  function getRequestDefaults(agent) {
    return agent
