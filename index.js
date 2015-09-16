@@ -1,7 +1,11 @@
 #! /usr/bin/env node
+/* process global */
 var program = require('commander');
 var branchLinker = require('./jira-branch-server-linker');
 
+/**
+ * TODO Maybe add update config command
+ */
 
 program
   .version('0.0.1')

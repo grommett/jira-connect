@@ -1,16 +1,18 @@
 var superAgent = require('superagent');
 var q = require('q');
-var branchName = 'https://pinkiering';
 var config = require('./config');
 var connect = require('./jira-connector');
 
 /**
  * Adds a branch link to a Jira card.
  * @param {string} issueID - the issue id from Jira
+ * @export addBranchLink
 */
-function addBranchLink(issueID) {
+function addBranchLink(branchName) {
+  
+  var issueID = getIssueID(branchName);
   var cardURL = config.jiraURL + '/rest/api/2/issue/' + issueID + '/remotelink';
-  var branchLink = branchName + config.branchServer;
+  var branchLink = slugify(branchName) + config.branchServer;
   var cardLinkData;
 
   getCardLinkData(cardURL)
@@ -18,21 +20,45 @@ function addBranchLink(issueID) {
       cardLinkData = linkInCard(branchLink, data);
       // check that link is not already in card
       if(cardLinkData.length === 0) {
-        console.log('Jira branch linker >> need to add link')
-        putCardLinkData(cardURL, createCardLinkObject(cardURL))
+        console.log('Jira branch linker >> need to add link');
+        console.log('cardURL ', cardURL, ' branchLink: ', branchLink);
+        putCardLinkData(cardURL, createCardLinkObject(branchLink))
         .then(function(data) {
           console.log('Jira branch linker >> Link added ('+ branchLink +'). ', data);
         })
         .catch(function(e) {
-          console.log('caught error ', e);
+          // throw 
         })
       }else{
         console.log('Jira branch linker >> Link to branch server ('+ branchLink +') was already in card.');
       }
     })
     .catch(function(e) {
+      // throw
       console.log('Jira branch linker >> error in addBranchLink(): ', e);
     })
+}
+
+
+/**
+ * Add this to addBranchLink
+ */
+ function maybeAddCardLink (data) {
+  // check that link is not already in card
+  var cardLinkData = linkInCard(branchLink, data);
+
+  if(cardLinkData.length === 0) {
+    console.log('Jira branch linker >> need to add link')
+    putCardLinkData(cardURL, createCardLinkObject(cardURL))
+    .then(function(data) {
+      console.log('Jira branch linker >> Link added ('+ branchLink +'). ', data);
+    })
+    .catch(function(e) {
+      console.log('caught error ', e);
+    })
+  }else{
+    console.log('Jira branch linker >> Link to branch server ('+ branchLink +') was already in card.');
+  }
 }
 
 /**
@@ -57,7 +83,6 @@ function getCardLinkData(link) {
 */
 function putCardLinkData(link, linkData) {
   var deferred = q.defer();
-  console.log('link data ', linkData);
   connect.post(link)
     .send(linkData)
     .end(function(err, res) {
@@ -74,10 +99,11 @@ function putCardLinkData(link, linkData) {
  * @return {object} - The link object to send to Jira API.
 */
 function createCardLinkObject(url, title) {
+  console.log('createCardLinkObject url: ', url)
   return  {
     object: {
       title: title || 'Branch URL',
-      url: branchName + config.branchServer
+      url:'https://' + url
     }
   }
 }
@@ -94,8 +120,23 @@ function linkInCard(link, cardData) {
   return linkArray;
 }
 
+/**
+ * Replaces '/' to '-' in the branch name as passed by Bamboo 
+ * @param {string} branchName - The branch name as passed by Bamboo.
+*/
+function slugify(branchName) {
+  return branchName.replace('/', '-');
+}
+
+/**
+ * Returns the Jira id given a branch name
+ * @param{string} str - The branch name
+ */
+function getIssueID(str) {
+  var idMatches = str.match(/\/([A-Z].*?-[0-9].*?)-/);
+  return idMatches[1];
+}
+
 module.exports = {
-  addBranchLink: addBranchLink,
-  confg: function(obj) {
-  }
+  addBranchLink: addBranchLink
 }
